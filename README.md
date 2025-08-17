@@ -1,73 +1,76 @@
-# Welcome to your Lovable project
+# FinAI Desk
 
-## Project info
+**FinAI Desk** is an AI-enabled accounting web application designed for accountants, financial consultants and small businesses looking to streamline everyday financial tasks. Built with a clean and highly usable interface, it combines traditional accounting utilities with real-time AI suggestions to improve decision making and save time.
 
-**URL**: https://lovable.dev/projects/6a11117f-02a5-4aa1-96ea-a9d97f7923c7
+---
 
-## How can I edit this code?
+## 💡 Overview
 
-There are several ways of editing your application.
+FinAI Desk delivers **three core tools** in one intuitive platform:
 
-**Use Lovable**
+### ✅ Depreciation Calculator
+Easily manage fixed assets and automate depreciation schedules.  
+- Add assets with name, category, value, purchase date and depreciation method  
+- Get AI recommendations on whether to use SLM or WDV  
+- Instantly calculate yearly depreciation and generate a 5-year forecast  
+- Export an audit-ready report in PDF format
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6a11117f-02a5-4aa1-96ea-a9d97f7923c7) and start prompting.
+### ✅ Loan EMI & Amortization Scheduler  
+Plan and visualise long-term loan commitments effortlessly.  
+- Enter loan amount, interest rate and repayment tenure  
+- View month-by-month EMI breakdown (principal + interest)  
+- Receive AI suggestions for optimising tenure or renegotiating interest rates and view potential savings  
+- Export amortization schedules in PDF or Excel format
 
-Changes made via Lovable will be committed automatically to this repo.
+### ✅ Tax Provision Estimator  
+Estimate year-end tax obligations with AI-assisted optimisation.  
+- Input annual taxable income and available deductions  
+- Upload Form 16 to automatically extract and fill values  
+- Let the AI suggest additional deduction opportunities based on your data  
+- Generate a summary PDF for audit or compliance purposes  
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🤖 AI Capabilities
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+FinAI Desk integrates with the **OpenRouter API** (model `openai/gpt-oss-20b:free`) to enhance user experience with intelligent features:
 
-Follow these steps:
+| Module                     | AI Support Provided |
+|---------------------------|---------------------|
+| Depreciation              | Method suggestions and forecast insights |
+| EMI Scheduler             | Tenure / interest optimisation and savings estimation |
+| Tax Provision             | Deduction suggestions and automated document data extraction |
+| Chat Assistant            | Instant answers to questions like “How much EMI is due next month?” or “How do I reduce tax in Q3?” |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🖥️ User Interface
 
-# Step 3: Install the necessary dependencies.
-npm i
+The application UI is built in Loveable (React + Tailwind) and designed to be clean, responsive, and fully accessible.  
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+The **homepage** contains a navigation bar with branding (favicon used as logo) and a single full-screen section explaining the app and its tools. A “Get Started” button directs users to the dashboard after login.
 
-**Edit a file directly in GitHub**
+The **dashboard** provides:
+- A concise summary of the user’s financial status
+- Quick access to each of the three tools
+- An embedded AI assistant for conversational queries
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Every page is routed properly and returns users to the correct location after login or action completion. All tools are responsive and work flawlessly across desktop and mobile.
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🔐 Security
 
-## What technologies are used for this project?
+All data operations are performed using a Supabase backend which already has its authentication and RLS policies in place. The OpenRouter API key is stored inside a Supabase Edge Function to ensure it is never exposed to the client.
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## ✅ Summary
 
-## How can I deploy this project?
+FinAI Desk combines a modern, polished UI with intelligent automation to help users:
+- Save time on repetitive calculations  
+- Make better financial decisions using AI suggestions  
+- Export clean, audit-friendly reports  
+- Access all financial tools from one interface
 
-Simply open [Lovable](https://lovable.dev/projects/6a11117f-02a5-4aa1-96ea-a9d97f7923c7) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This project reflects a production-grade architecture and a real-world workflow used by professional accountants.
