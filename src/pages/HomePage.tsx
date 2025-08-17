@@ -1,9 +1,23 @@
+
 import { Layout } from "@/components/Layout";
 import { FeatureCard } from "@/components/FeatureCard";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Calculator, TrendingUp, Receipt, Bot, BarChart3, FileText, Shield, Zap } from "lucide-react";
 
 const HomePage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <Layout>
       <main className="container mx-auto px-4 lg:px-8 py-16">
@@ -24,8 +38,8 @@ const HomePage = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant="hero" size="xl" className="min-w-48">
-              Get Started Free
+            <Button onClick={handleGetStarted} variant="hero" size="xl" className="min-w-48">
+              {user ? 'Go to Dashboard' : 'Get Started Free'}
             </Button>
             <Button variant="outline" size="xl" className="min-w-48">
               Watch Demo
@@ -127,8 +141,8 @@ const HomePage = () => {
             <p className="text-lg text-muted-foreground">
               Join thousands of businesses using AI to streamline their financial operations.
             </p>
-            <Button variant="hero" size="xl">
-              Start Your Free Trial
+            <Button onClick={handleGetStarted} variant="hero" size="xl">
+              {user ? 'Go to Dashboard' : 'Start Your Free Trial'}
             </Button>
           </div>
         </section>
