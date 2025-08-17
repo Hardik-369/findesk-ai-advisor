@@ -21,10 +21,6 @@ const Dashboard = () => {
     taxLiability: 0
   });
 
-  useEffect(() => {
-    loadFinancialSummary();
-  }, [user]);
-
   const loadFinancialSummary = async () => {
     if (!user) return;
     
@@ -66,6 +62,21 @@ const Dashboard = () => {
       console.error('Error loading financial summary:', error);
     }
   };
+
+  useEffect(() => {
+    loadFinancialSummary();
+
+    // Listen for data updates from other components
+    const handleDataUpdate = () => {
+      loadFinancialSummary();
+    };
+
+    window.addEventListener('dataUpdated', handleDataUpdate);
+    
+    return () => {
+      window.removeEventListener('dataUpdated', handleDataUpdate);
+    };
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();

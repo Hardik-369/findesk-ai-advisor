@@ -30,15 +30,25 @@ export const DepreciationCalculator = () => {
     name: '',
     category: '',
     purchase_value: 0,
-    purchase_date: '',
+    purchase_date: new Date().toISOString().split('T')[0],
     salvage_value: 0,
     useful_life_years: 5,
     depreciation_method: 'straight_line'
   });
   const [forecast, setForecast] = useState<any[]>([]);
   const [aiSuggestion, setAiSuggestion] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const calculateDepreciation = () => {
+    if (!asset.purchase_value || !asset.useful_life_years) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter purchase value and useful life years.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const years = [];
     const depreciableAmount = asset.purchase_value - asset.salvage_value;
     
@@ -67,6 +77,15 @@ export const DepreciationCalculator = () => {
   };
 
   const getAISuggestion = async () => {
+    if (!asset.name || !asset.category || !asset.purchase_value) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in asset details first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const context = `Asset: ${asset.name}, Category: ${asset.category}, Value: ₹${asset.purchase_value}, Life: ${asset.useful_life_years} years`;
     const prompt = "Suggest the optimal depreciation method for this asset and explain the tax benefits.";
     
@@ -77,10 +96,18 @@ export const DepreciationCalculator = () => {
   };
 
   const saveAsset = async () => {
-    if (!user) return;
+    if (!user || !asset.name || !asset.purchase_value) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
     
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('assets')
         .insert([{
           ...asset,
@@ -95,12 +122,44 @@ export const DepreciationCalculator = () => {
         description: "Asset has been saved successfully.",
         variant: "default"
       });
+
+      // Reset form
+      setAsset({
+        name: '',
+        category: '',
+        purchase_value: 0,
+        purchase_date: new Date().toISOString().split('T')[0],
+        salvage_value: 0,
+        useful_life_years: 5,
+        depreciation_method: 'straight_line'
+      });
+      setForecast([]);
+      setAiSuggestion('');
+      
+      // Trigger dashboard refresh by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
     } catch (error) {
       console.error('Error saving asset:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save asset. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const exportPDF = () => {
+    if (forecast.length === 0) {
+      toast({
+        title: "No Data",
+        description: "Please calculate depreciation first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const doc = new jsPDF();
     doc.setFontSize(20);
     doc.text('Depreciation Report', 20, 30);
@@ -115,7 +174,7 @@ export const DepreciationCalculator = () => {
     doc.text('5-Year Forecast:', 20, yPos);
     yPos += 20;
     
-    forecast.forEach((year, index) => {
+    forecast.forEach((year) => {
       doc.text(`Year ${year.year}: Depreciation ₹${year.depreciation.toFixed(2)}, Book Value ₹${year.bookValue.toFixed(2)}`, 20, yPos);
       yPos += 10;
     });
@@ -128,7 +187,7 @@ export const DepreciationCalculator = () => {
       doc.text(splitText, 20, yPos);
     }
     
-    doc.save(`${asset.name}-depreciation-report.pdf`);
+    doc.save(`${asset.name || 'asset'}-depreciation-report.pdf`);
   };
 
   return (
@@ -143,16 +202,17 @@ export const DepreciationCalculator = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">Asset Name</Label>
+              <Label htmlFor="name">Asset Name *</Label>
               <Input
                 id="name"
                 value={asset.name}
                 onChange={(e) => setAsset({ ...asset, name: e.target.value })}
-                placeholder="Enter asset name"
+                placeholder="e.g., Company Car"
+                required
               />
             </div>
             <div>
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">Category *</Label>
               <Select value={asset.category} onValueChange={(value) => setAsset({ ...asset, category: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
@@ -167,12 +227,15 @@ export const DepreciationCalculator = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="value">Purchase Value (₹)</Label>
+              <Label htmlFor="value">Purchase Value (₹) *</Label>
               <Input
                 id="value"
                 type="number"
-                value={asset.purchase_value}
+                value={asset.purchase_value || ''}
                 onChange={(e) => setAsset({ ...asset, purchase_value: Number(e.target.value) })}
+                placeholder="0"
+                min="1"
+                required
               />
             </div>
             <div>
@@ -189,8 +252,10 @@ export const DepreciationCalculator = () => {
               <Input
                 id="salvage"
                 type="number"
-                value={asset.salvage_value}
+                value={asset.salvage_value || ''}
                 onChange={(e) => setAsset({ ...asset, salvage_value: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
             <div>
@@ -200,6 +265,8 @@ export const DepreciationCalculator = () => {
                 type="number"
                 value={asset.useful_life_years}
                 onChange={(e) => setAsset({ ...asset, useful_life_years: Number(e.target.value) })}
+                min="1"
+                max="50"
               />
             </div>
           </div>
@@ -223,7 +290,9 @@ export const DepreciationCalculator = () => {
               <Sparkles className="h-4 w-4 mr-2" />
               Get AI Suggestion
             </Button>
-            <Button onClick={saveAsset} variant="success">Save Asset</Button>
+            <Button onClick={saveAsset} disabled={loading} variant="success">
+              {loading ? 'Saving...' : 'Save Asset'}
+            </Button>
           </div>
         </CardContent>
       </Card>

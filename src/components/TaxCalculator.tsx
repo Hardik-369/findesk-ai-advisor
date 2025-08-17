@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,8 +38,18 @@ export const TaxCalculator = () => {
     other_deductions: 0
   });
   const [aiSuggestion, setAiSuggestion] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const calculateTax = () => {
+    if (!taxData.taxable_income) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter taxable income.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const totalDeductions = taxData.standard_deduction + taxData.section_80c_investments + 
                            taxData.house_rent_allowance + taxData.leave_travel_allowance + 
                            taxData.section_80d_medical + taxData.other_deductions;
@@ -74,21 +83,19 @@ export const TaxCalculator = () => {
     });
   };
 
-  const getAISuggestion = async () => {
-    const context = `Income: ₹${taxData.taxable_income}, 80C: ₹${taxData.section_80c_investments}, HRA: ₹${taxData.house_rent_allowance}, Medical: ₹${taxData.section_80d_medical}`;
-    const prompt = "Suggest tax-saving strategies and deductions to minimize tax liability legally. Include specific investment options under 80C, 80D, and other sections.";
-    
-    const response = await getAIResponse(prompt, context, 'tax');
-    if (response) {
-      setAiSuggestion(response);
-    }
-  };
-
   const saveTaxRecord = async () => {
-    if (!user) return;
+    if (!user || !taxData.taxable_income || taxData.calculated_tax === undefined) {
+      toast({
+        title: "Missing Information",
+        description: "Please calculate tax first and fill in required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
     
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tax_records')
         .insert([{
           ...taxData,
@@ -102,8 +109,41 @@ export const TaxCalculator = () => {
         title: "Tax Record Saved",
         description: "Tax calculation has been saved successfully.",
       });
+
+      // Reset form
+      setTaxData({
+        financial_year: '2024-25',
+        taxable_income: 0,
+        standard_deduction: 50000,
+        section_80c_investments: 0,
+        house_rent_allowance: 0,
+        leave_travel_allowance: 0,
+        section_80d_medical: 0,
+        other_deductions: 0
+      });
+      setAiSuggestion('');
+
+      // Trigger dashboard refresh
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
     } catch (error) {
       console.error('Error saving tax record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save tax record. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAISuggestion = async () => {
+    const context = `Income: ₹${taxData.taxable_income}, 80C: ₹${taxData.section_80c_investments}, HRA: ₹${taxData.house_rent_allowance}, Medical: ₹${taxData.section_80d_medical}`;
+    const prompt = "Suggest tax-saving strategies and deductions to minimize tax liability legally. Include specific investment options under 80C, 80D, and other sections.";
+    
+    const response = await getAIResponse(prompt, context, 'tax');
+    if (response) {
+      setAiSuggestion(response);
     }
   };
 
@@ -168,12 +208,15 @@ export const TaxCalculator = () => {
               />
             </div>
             <div>
-              <Label htmlFor="income">Taxable Income (₹)</Label>
+              <Label htmlFor="income">Taxable Income (₹) *</Label>
               <Input
                 id="income"
                 type="number"
-                value={taxData.taxable_income}
+                value={taxData.taxable_income || ''}
                 onChange={(e) => setTaxData({ ...taxData, taxable_income: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
+                required
               />
             </div>
             <div>
@@ -190,8 +233,10 @@ export const TaxCalculator = () => {
               <Input
                 id="sec80c"
                 type="number"
-                value={taxData.section_80c_investments}
+                value={taxData.section_80c_investments || ''}
                 onChange={(e) => setTaxData({ ...taxData, section_80c_investments: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
             <div>
@@ -199,8 +244,10 @@ export const TaxCalculator = () => {
               <Input
                 id="hra"
                 type="number"
-                value={taxData.house_rent_allowance}
+                value={taxData.house_rent_allowance || ''}
                 onChange={(e) => setTaxData({ ...taxData, house_rent_allowance: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
             <div>
@@ -208,8 +255,10 @@ export const TaxCalculator = () => {
               <Input
                 id="lta"
                 type="number"
-                value={taxData.leave_travel_allowance}
+                value={taxData.leave_travel_allowance || ''}
                 onChange={(e) => setTaxData({ ...taxData, leave_travel_allowance: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
             <div>
@@ -217,8 +266,10 @@ export const TaxCalculator = () => {
               <Input
                 id="medical"
                 type="number"
-                value={taxData.section_80d_medical}
+                value={taxData.section_80d_medical || ''}
                 onChange={(e) => setTaxData({ ...taxData, section_80d_medical: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
             <div>
@@ -226,8 +277,10 @@ export const TaxCalculator = () => {
               <Input
                 id="other"
                 type="number"
-                value={taxData.other_deductions}
+                value={taxData.other_deductions || ''}
                 onChange={(e) => setTaxData({ ...taxData, other_deductions: Number(e.target.value) })}
+                placeholder="0"
+                min="0"
               />
             </div>
           </div>
@@ -253,7 +306,9 @@ export const TaxCalculator = () => {
               <Sparkles className="h-4 w-4 mr-2" />
               Get AI Suggestions
             </Button>
-            <Button onClick={saveTaxRecord} variant="success">Save Record</Button>
+            <Button onClick={saveTaxRecord} disabled={loading} variant="success">
+              {loading ? 'Saving...' : 'Save Record'}
+            </Button>
           </div>
 
           {taxData.calculated_tax !== undefined && (

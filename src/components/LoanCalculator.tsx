@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,12 +34,22 @@ export const LoanCalculator = () => {
     principal_amount: 0,
     interest_rate: 0,
     tenure_months: 12,
-    start_date: ''
+    start_date: new Date().toISOString().split('T')[0]
   });
   const [schedule, setSchedule] = useState<any[]>([]);
   const [aiSuggestion, setAiSuggestion] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const calculateEMI = () => {
+    if (!loan.principal_amount || !loan.interest_rate || !loan.tenure_months) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all loan details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const P = loan.principal_amount;
     const r = loan.interest_rate / 100 / 12;
     const n = loan.tenure_months;
@@ -77,21 +86,19 @@ export const LoanCalculator = () => {
     setSchedule(amortizationSchedule);
   };
 
-  const getAISuggestion = async () => {
-    const context = `Loan: ₹${loan.principal_amount}, Interest: ${loan.interest_rate}%, Tenure: ${loan.tenure_months} months, EMI: ₹${loan.emi_amount?.toFixed(2)}`;
-    const prompt = "Suggest ways to reduce interest burden and optimize this loan. Include strategies for prepayment and refinancing.";
-    
-    const response = await getAIResponse(prompt, context, 'loan');
-    if (response) {
-      setAiSuggestion(response);
-    }
-  };
-
   const saveLoan = async () => {
-    if (!user) return;
+    if (!user || !loan.loan_name || !loan.principal_amount || !loan.emi_amount) {
+      toast({
+        title: "Missing Information",
+        description: "Please calculate EMI first and fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
     
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('loans')
         .insert([{
           ...loan,
@@ -105,8 +112,40 @@ export const LoanCalculator = () => {
         title: "Loan Saved",
         description: "Loan details have been saved successfully.",
       });
+
+      // Reset form
+      setLoan({
+        loan_name: '',
+        loan_type: 'personal',
+        principal_amount: 0,
+        interest_rate: 0,
+        tenure_months: 12,
+        start_date: new Date().toISOString().split('T')[0]
+      });
+      setSchedule([]);
+      setAiSuggestion('');
+
+      // Trigger dashboard refresh
+      window.dispatchEvent(new CustomEvent('dataUpdated'));
     } catch (error) {
       console.error('Error saving loan:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save loan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAISuggestion = async () => {
+    const context = `Loan: ₹${loan.principal_amount}, Interest: ${loan.interest_rate}%, Tenure: ${loan.tenure_months} months, EMI: ₹${loan.emi_amount?.toFixed(2)}`;
+    const prompt = "Suggest ways to reduce interest burden and optimize this loan. Include strategies for prepayment and refinancing.";
+    
+    const response = await getAIResponse(prompt, context, 'loan');
+    if (response) {
+      setAiSuggestion(response);
     }
   };
 
@@ -154,12 +193,13 @@ export const LoanCalculator = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="loanName">Loan Name</Label>
+              <Label htmlFor="loanName">Loan Name *</Label>
               <Input
                 id="loanName"
                 value={loan.loan_name}
                 onChange={(e) => setLoan({ ...loan, loan_name: e.target.value })}
-                placeholder="Enter loan name"
+                placeholder="e.g., Home Loan"
+                required
               />
             </div>
             <div>
@@ -177,31 +217,39 @@ export const LoanCalculator = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="principal">Principal Amount (₹)</Label>
+              <Label htmlFor="principal">Principal Amount (₹) *</Label>
               <Input
                 id="principal"
                 type="number"
-                value={loan.principal_amount}
+                value={loan.principal_amount || ''}
                 onChange={(e) => setLoan({ ...loan, principal_amount: Number(e.target.value) })}
+                placeholder="0"
+                min="1"
+                required
               />
             </div>
             <div>
-              <Label htmlFor="rate">Interest Rate (%)</Label>
+              <Label htmlFor="rate">Interest Rate (%) *</Label>
               <Input
                 id="rate"
                 type="number"
                 step="0.01"
-                value={loan.interest_rate}
+                value={loan.interest_rate || ''}
                 onChange={(e) => setLoan({ ...loan, interest_rate: Number(e.target.value) })}
+                placeholder="0"
+                min="0.01"
+                required
               />
             </div>
             <div>
-              <Label htmlFor="tenure">Tenure (Months)</Label>
+              <Label htmlFor="tenure">Tenure (Months) *</Label>
               <Input
                 id="tenure"
                 type="number"
                 value={loan.tenure_months}
                 onChange={(e) => setLoan({ ...loan, tenure_months: Number(e.target.value) })}
+                min="1"
+                required
               />
             </div>
             <div>
@@ -221,7 +269,9 @@ export const LoanCalculator = () => {
               <Sparkles className="h-4 w-4 mr-2" />
               Get AI Suggestion
             </Button>
-            <Button onClick={saveLoan} variant="success">Save Loan</Button>
+            <Button onClick={saveLoan} disabled={loading} variant="success">
+              {loading ? 'Saving...' : 'Save Loan'}
+            </Button>
           </div>
 
           {loan.emi_amount && (
